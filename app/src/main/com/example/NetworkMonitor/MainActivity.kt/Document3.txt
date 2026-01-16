@@ -1,0 +1,67 @@
+package com.example.networkmonitor
+
+import android.content.*
+import android.net.*
+import android.os.Bundle
+import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
+import java.net.NetworkInterface
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var status: TextView
+    private lateinit var type: TextView
+    private lateinit var ip: TextView
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        status = findViewById(R.id.txtStatus)
+        type = findViewById(R.id.txtType)
+        ip = findViewById(R.id.txtIP)
+
+        registerReceiver(networkReceiver,
+            IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION))
+
+        updateNetworkInfo()
+    }
+
+    private val networkReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            updateNetworkInfo()
+        }
+    }
+
+    private fun updateNetworkInfo() {
+        val cm = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val active = cm.activeNetworkInfo
+
+        if (active != null && active.isConnected) {
+            status.text = "Connected"
+            type.text = "Type: ${active.typeName}"
+            ip.text = "IP: ${getIPAddress()}"
+        } else {
+            status.text = "Disconnected"
+            type.text = "-"
+            ip.text = "-"
+        }
+    }
+
+    private fun getIPAddress(): String {
+        val interfaces = NetworkInterface.getNetworkInterfaces()
+        for (intf in interfaces) {
+            for (addr in intf.inetAddresses) {
+                if (!addr.isLoopbackAddress && addr is java.net.Inet4Address) {
+                    return addr.hostAddress
+                }
+            }
+        }
+        return "Unavailable"
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        unregisterReceiver(networkReceiver)
+    }
+}
